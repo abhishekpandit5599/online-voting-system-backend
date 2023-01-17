@@ -109,8 +109,9 @@ route.post(
         },
       };
       if (user.verified) {
+        user = await User.findOne({ adhar_no }).select("-password");
         const authtoken = jwt.sign(data, JWT_SECERT);
-        return res.json({ success: true, authtoken });
+        return res.json({ success: true, user, admin: user.admin, authtoken });
       } else {
         return res.json({
           success: false,
@@ -126,7 +127,7 @@ route.post(
 );
 
 // Route 3 : See Candidate according to election
-route.get("/user/candidates-details", fetchUser, async (req, res) => {
+route.post("/user/candidates-details", fetchUser, async (req, res) => {
   try {
     const { election_id } = req.body;
 
@@ -177,7 +178,7 @@ route.post("/user/vote", fetchUser, async (req, res) => {
       election_id: candidate[0].election_id,
       candidate_id: candidate[0]._id,
       user_id: req.user.id,
-      user_name: admin.user_name
+      user_name: admin.user_name,
     });
 
     return res.json({
@@ -185,6 +186,33 @@ route.post("/user/vote", fetchUser, async (req, res) => {
       result,
       msg: "Successfully give the vote.",
     });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ status: false, error });
+  }
+});
+
+// Route 5 : Return voted or not response
+route.post("/user/vote-status", fetchUser, async (req, res) => {
+  try {
+    const { election_id, user_id } = req.body;
+
+    const admin = await User.findById(req.user.id);
+    if (admin.admin) {
+      return res.status(401).json({ error: "Admin cannot give vote." });
+    }
+    if (!election_id && !user_id) {
+      return res.json({
+        msg: "Please provide candidate_id,election_id for give the vote",
+      });
+    }
+
+    const vote = await Voting.find({ election_id, user_id });
+    if (vote.length) {
+      return res.json({ status: true, vote, msg: "Already Voted." });
+    } else {
+      return res.json({ status: false, vote, msg: "Not Voted." });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({ status: false, error });

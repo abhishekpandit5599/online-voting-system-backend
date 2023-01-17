@@ -106,12 +106,10 @@ route.post("/admin/add-candidate", fetchUser, async (req, res) => {
       candidate_age,
     });
     if (result.length) {
-      return res
-        .status(200)
-        .json({
-          status: false,
-          msg: "Candidate All ready added in this election",
-        });
+      return res.status(200).json({
+        status: false,
+        msg: "Candidate All ready added in this election",
+      });
     }
 
     const candidate = await Candidate.create({
@@ -141,15 +139,18 @@ route.get("/admin/all-elections", fetchUser, async (req, res) => {
 });
 
 // Route 5 : See User Approved or pending
-route.get("/admin/user-list", fetchUser, async (req, res) => {
+route.post("/admin/user-list", fetchUser, async (req, res) => {
   try {
     const admin = await User.findById(req.user.id);
     if (!admin.admin) {
       return res.status(401).json({ error: "Only Access Admin." });
     }
-    const {approved_list} = req.body;
+    const { approved_list } = req.body;
 
-    const list = await User.find({verified: approved_list,admin: false}).select("-password");
+    const list = await User.find({
+      verified: approved_list,
+      admin: false,
+    }).select("-password");
     return res.json({ status: true, list });
   } catch (error) {
     console.log(error);
@@ -157,17 +158,16 @@ route.get("/admin/user-list", fetchUser, async (req, res) => {
   }
 });
 
-
 // Route 6 : See Candidate according to election
-route.get("/admin/candidates-details", fetchUser, async (req, res) => {
+route.post("/admin/candidates-details", fetchUser, async (req, res) => {
   try {
     const admin = await User.findById(req.user.id);
     if (!admin.admin) {
       return res.status(401).json({ error: "Only Access Admin." });
     }
-    const {election_id} = req.body;
+    const { election_id } = req.body;
 
-    const candidate_list = await Candidate.find({election_id});
+    const candidate_list = await Candidate.find({ election_id });
     return res.json({ status: true, candidate_list });
   } catch (error) {
     console.log(error);
@@ -175,18 +175,67 @@ route.get("/admin/candidates-details", fetchUser, async (req, res) => {
   }
 });
 
-
 // Route 7 : Get All Voted User
-route.get("/admin/voted-user", fetchUser, async (req, res) => {
+route.post("/admin/voted-user", fetchUser, async (req, res) => {
   try {
     const admin = await User.findById(req.user.id);
     if (!admin.admin) {
       return res.status(401).json({ error: "Only Access Admin." });
     }
-    const {election_id} = req.body;
+    const { election_id } = req.body;
 
-    const voted_user_list = await Voting.find({election_id});
+    const voted_user_list = await Voting.find({ election_id });
     return res.json({ status: true, voted_user_list });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ status: false, error });
+  }
+});
+
+// Route 8 : get all stats for admin dashboard
+route.get("/admin/get-all-stats", async (req, res) => {
+  try {
+    const total_candidate = await (await Candidate.find()).length;
+    const total_election = await (await Election.find()).length;
+    const total_user = (await (await User.find()).length) - 1;
+    return res.json({
+      status: true,
+      total_candidate,
+      total_election,
+      total_user,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ status: false, error });
+  }
+});
+
+// Route 9 : get recent results admin
+route.get("/admin/recent-results", fetchUser, async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id);
+    if (!admin.admin) {
+      return res.status(401).json({ error: "Only Access Admin." });
+    }
+
+    const candidate_list = await (await Candidate.find()).splice(0, 5);
+    return res.json({ status: true, candidate_list });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ status: false, error });
+  }
+});
+
+// Route 10 : get recent voters admin
+route.get("/admin/recent-voters", fetchUser, async (req, res) => {
+  try {
+    const admin = await User.findById(req.user.id);
+    if (!admin.admin) {
+      return res.status(401).json({ error: "Only Access Admin." });
+    }
+
+    const voters = await (await Voting.find()).splice(0, 5);
+    return res.json({ status: true, voters });
   } catch (error) {
     console.log(error);
     res.status(500).json({ status: false, error });
