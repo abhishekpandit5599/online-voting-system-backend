@@ -167,8 +167,10 @@ route.post("/admin/candidates-details", fetchUser, async (req, res) => {
     }
     const { election_id } = req.body;
 
+    const total_voters = await (await Voting.find({election_id})).length;
+
     const candidate_list = await Candidate.find({ election_id });
-    return res.json({ status: true, candidate_list });
+    return res.json({ status: true,total_voters, candidate_list });
   } catch (error) {
     console.log(error);
     res.status(500).json({ status: false, error });
@@ -236,6 +238,45 @@ route.get("/admin/recent-voters", fetchUser, async (req, res) => {
 
     const voters = await (await Voting.find()).splice(0, 5);
     return res.json({ status: true, voters });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ status: false, error });
+  }
+});
+
+// Route 11 : get Proper result 
+route.post("/admin/result", fetchUser, async (req, res) => {
+  try {
+    const {election_id} = req.body;
+    if(!election_id){
+      return res.status(200).json({status: false, msg : "Please provide the election_id"});
+    }
+
+    const admin = await User.findById(req.user.id);
+    if (!admin.admin) {
+      return res.status(401).json({ error: "Only Access Admin." });
+    }
+
+    const voter_list = await Voting.find({election_id});
+    let obj = {};
+    let arr =[];
+    const total_voters = voter_list.length;
+    voter_list.forEach((element)=>{
+      if(element.candidate_id in arr){
+        obj[element.candidate_id] = obj[element.candidate_id] + 1;
+      }else{
+        arr.push(element.candidate_id);
+        obj[element.candidate_id] = 1;
+      }
+    })
+
+    Object.keys(obj).forEach(function(key, idx) {
+      let voter = obj[key];
+      let percentage = (voter*100)/total_voters; 
+      obj[key] = percentage;
+   });
+    console.log(obj)
+    res.status(200).json({ status: true, obj });
   } catch (error) {
     console.log(error);
     res.status(500).json({ status: false, error });
