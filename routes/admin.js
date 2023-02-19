@@ -1,4 +1,5 @@
 const express = require("express");
+const multer = require("multer");
 
 const fetchUser = require("../middleware/fetchUser");
 
@@ -10,6 +11,16 @@ const Candidate = require("../model/Candidate");
 const Voting = require("../model/Voting");
 
 const route = express.Router();
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: function(req,file,cb){
+      cb(null,"files")
+    },
+    filename:function(req,file,cb){
+      cb(null,req.body.candidate_name+"-"+ req.body.party_name +"-" + req.body.election_id + "-" + file.fieldname+".jpg")
+    }
+  })
+}).single("party_logo");
 
 // Route 1 : Create Election
 route.post("/admin/create-election", fetchUser, async (req, res) => {
@@ -67,7 +78,7 @@ route.put("/admin/verify-user", fetchUser, async (req, res) => {
 });
 
 // Route 3 : Add Candidate for Specific Election
-route.post("/admin/add-candidate", fetchUser, async (req, res) => {
+route.post("/admin/add-candidate", fetchUser, upload , async (req, res) => {
   try {
     const admin = await User.findById(req.user.id);
     if (!admin.admin) {
@@ -79,15 +90,13 @@ route.post("/admin/add-candidate", fetchUser, async (req, res) => {
       election_id,
       party_name,
       candidate_age,
-      party_logo,
     } = req.body;
     if (
       !election_id &&
       !candidate_name &&
       !election_id &&
       !party_name &&
-      !candidate_age &&
-      !party_logo
+      !candidate_age 
     ) {
       return res.status(200).json({
         status: false,
@@ -117,7 +126,7 @@ route.post("/admin/add-candidate", fetchUser, async (req, res) => {
       election_id,
       party_name,
       candidate_age,
-      party_logo,
+      party_logo: "/files/" + candidate_name+"-"+ party_name +"-" + election_id + "-" + req.file.fieldname+ ".jpg",
     });
     return res.json({ status: true, candidate });
   } catch (error) {
