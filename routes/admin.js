@@ -11,6 +11,8 @@ const Candidate = require("../model/Candidate");
 const Voting = require("../model/Voting");
 
 const route = express.Router();
+
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: function(req,file,cb){
